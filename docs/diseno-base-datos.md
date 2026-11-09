@@ -1,28 +1,26 @@
 # Arquitectura de datos y diseño de base de datos
 
-**Universidad Santiago de Cali** Facultad de Ingeniería – Programa de Ingeniería de Sistemas
+**Universidad Santiago de Cali** · Facultad de Ingeniería – Programa de Ingeniería de Sistemas
 
-**Arquitectura de datos y diseño de base de datos del sistema MAMMO-AI**
+**Integrantes:** Alvaro Jose Jaramillo Gonzalez - Juan José Herrera Rengifo - Juan Camilo Ospina Daza - Kelvin Andres Palma Viveros - Daniel Esteban Olarte Vasquez
 
-Integrantes: Alvaro Jose Jaramillo Gonzalez - Juan José Herrera Rengifo - Juan Camilo Ospina Daza - Kelvin Andres Palma Viveros - Daniel Esteban Olarte Vasquez
-
-Docente: Jair Enrique Sanclemente Castro Asignatura: Gestión de Proyectos de TI
+**Docente:** Jair Enrique Sanclemente Castro · **Asignatura:** Gestión de Proyectos de TI
 
 Santiago de Cali, octubre de 2026
 
 ## Introducción
 
-MAMMO-AI es una aplicación web que apoya el análisis preliminar de mamografías. Clasifica cada imagen como normal o sospechosa mediante una red neuronal convolucional, explica el resultado con un mapa de calor Grad-CAM y, además, incluye un tutor de inteligencia artificial que acompaña al profesional de la salud a revisar las recomendaciones del modelo.
+MAMMO-AI es un aplicativo web de apoyo al análisis preliminar de mamografías. Clasificndo cada imagen como normal o sospechosa a partir del uso de una red neuronal convolucional, explica los resultado con un mapa de calor Grad-CAM e incluye un tutor de inteligencia artificial que interactua con el profesional de la salud frente a las recomendaciones del modelo.
 
-Un sistema así depende, en buena medida, de cómo organiza sus datos. Tiene que guardar las imágenes cargadas, los resultados de cada análisis, las versiones del modelo junto con sus métricas y las respuestas de los usuarios en el tutor. Todo esto debe hacerse sin almacenar información que identifique a una paciente, como lo exige la Ley 1581 de 2012.
+Un sistema así depende de cómo se organizan sus datos. Debe guardar las imágenes cargadas, los resultados de cada análisis, las versiones del modelo con sus métricas y las respuestas de los usuarios en el tutor. Además, debe hacerlo sin almacenar información que identifique a una paciente, en cumplimiento de la Ley 1581 de 2012.
 
-Este documento presenta la arquitectura de datos de MAMMO-AI y el diseño de su base de datos. El trabajo se organizó en cinco fases: recogida y análisis de requisitos, diseño conceptual, diseño lógico, diseño físico, e implementación y optimización. Los requisitos de partida salen de la Matriz de Trazabilidad de Requisitos del proyecto, y el diseño físico se implementó y probó en PostgreSQL 16.
+Este documento presenta la arquitectura de datos de MAMMO-AI y el diseño de su base de datos, desarrollado en las cinco fases del proceso: recogida y análisis de requisitos, diseño conceptual, diseño lógico, diseño físico, e implementación y optimización. Los requisitos de partida se toman de la Matriz de Trazabilidad de Requisitos del proyecto, y el diseño físico se implementó y probó en PostgreSQL 16.
 
 ## Arquitectura de datos
 
-La arquitectura de datos describe cómo se gestionan los datos desde que se recopilan hasta que se transforman, distribuyen y consumen. Es, en otras palabras, el plano técnico de cómo fluyen por los sistemas de almacenamiento (Krantz y Jonker, 2025). Según los mismos autores, sus componentes se agrupan en cuatro frentes: el flujo e integración de los datos, los sistemas de almacenamiento, el acceso y consumo, y la gobernanza y los metadatos.
+La arquitectura de datos dice cómo se gestiona los datos desde su recopilación hasta su transformación, distribución y consumo, y establece el plano técnico de cómo fluye en los sistemas de almacenamiento (Krantz y Jonker, 2025). Según los mismos autores, sus componentes se dividen en cuatro frentes: el flujo e integración de los datos, los sistemas de almacenamiento, el acceso y consumo, y la gobernanza y los metadatos.
 
-En MAMMO-AI los datos atraviesan cinco capas, que se muestran en la Figura 1.
+En MAMMO-AI los datos recorren cinco capas, representadas en la Figura 1.
 
 ![Figura 1. Arquitectura de datos de MAMMO-AI](img/arquitectura-datos.png)
 
@@ -40,25 +38,25 @@ En MAMMO-AI los datos atraviesan cinco capas, que se muestran en la Figura 1.
 | 4\. Procesamiento            | El entrenamiento en Google Colab registra cada versión del modelo con sus métricas almacenadas; el servicio de inferencia usa el modelo activo, genera el Grad-CAM y guarda el resultado. |
 | 5\. Consumo                  | El aplicativo web muestra la clasificación y el mapa de calor, el tutor presenta escenarios y registra respuestas, y los reportes de calidad consultan métricas y tiempos.                |
 
-La decisión central de esta arquitectura es separar los archivos pesados de los datos estructurados. Las imágenes no se guardan dentro de la base de datos; allí solo quedan su ruta, su huella y sus metadatos. Con esto la base de datos se mantiene liviana, los respaldos son más rápidos y las consultas trabajan sobre datos que sí se filtran y relacionan con SQL.
+La decisión central de esta arquitectura es separar los archivos pesados de los datos estructurados. Las imágenes no se guardan dentro de la base de datos: solo quedan su ruta, su huella y sus metadatos. Así la base de datos no se vuelve tan robusta, los respaldos son rápidos y las consultas trabajan sobre datos que sí se filtran y relacionan con SQL.
 
-La organización combina dos patrones arquitectónicos que describe Sommerville. La ingesta sigue el patrón *tubería y filtro*: cada etapa transforma los datos y se los pasa a la siguiente. El almacenamiento sigue el patrón *repositorio*: la aplicación, el tutor y los reportes comparten una misma base de datos, en lugar de intercambiar datos directamente entre ellos.
+Esta organización combina dos patrones arquitectónicos que describe Sommerville. La ingesta sigue el patrón de *tubería y filtro*, porque cada etapa transforma los datos y los entrega a la siguiente. El almacenamiento sigue el patrón de *repositorio*, porque la aplicación, el tutor y los reportes comparten una misma base de datos en lugar de intercambiar datos directamente entre ellos.
 
 ## Diseño de base de datos
 
-El diseño de base de datos se ocupa de la estructura: qué entidades existen, cómo se relacionan y qué restricciones deben cumplir. Si la arquitectura responde por dónde viajan los datos, el diseño responde por cómo quedan organizados una vez almacenados.
+El diseño de base de datos representa la estructura: describe sus entidades, las relaciones entre ellas y las restricciones que tienen. Si la arquitectura de datos responde por dónde viajan los datos, el diseño de la base de datos responde cómo quedan organizados una vez son almacenados.
 
-En este proceso se decide qué tablas existen, qué atributos tiene cada una, cuáles son sus llaves primarias y foráneas, y qué reglas deben cumplir los datos, todo para atender las necesidades de los usuarios (Casas Roma, s. f.). Como es un problema bastante complejo, el mismo autor propone abordarlo con la estrategia de «divide y vencerás»: el diseño se parte en etapas secuenciales, y el resultado de cada una sirve de punto de partida para la siguiente. Aun así, el proceso permite volver atrás cuando una etapa posterior revela una necesidad nueva.
+El proceso de diseño consiste en definir una estructura lógica y física de la base de datos para atender las necesidades de los usuarios. En este proceso se decide qué tablas existen, qué atributos tiene cada una, cuáles son sus llaves primarias y foráneas, y qué reglas deben cumplir los datos (Casas Roma, s. f.). Como se trata de un problema con complejidad importante, el mismo autor propone abordarlo con la estrategia de “Divide y venceras” el diseño se divide en etapas secuenciales, y el resultado de cada etapa es el punto de partida de la siguiente. Aun así, el proceso admite volver a una etapa anterior cuando una posterior revela una necesidad nueva.
 
-IBM distingue tres niveles de modelado, que corresponden a las fases centrales de este proceso. El conceptual muestra las entidades y las reglas del negocio. El lógico detalla los atributos y las relaciones sin depender de ninguna tecnología. El físico define las tablas, los índices y los formatos de almacenamiento (Krantz y Jonker, 2025). Sommerville (2011, cap. 5) ubica este trabajo dentro del modelado estructural del sistema, donde los modelos semánticos de datos, como el modelo entidad-relación, describen la información que el software debe gestionar.
+según IBM hay tres niveles de modelado que básicamente calzan con las fases principales del proceso. Está el conceptual, que es el que muestra las entidades y las reglas del negocio; el lógico, que mete los atributos y las relaciones sin meterse con tecnología; y el físico, que ya define tablas, índices y cómo se guarda todo (Krantz y Jonker, 2025). Sommerville (2011, cap. 5) lo ubica dentro del modelado estructural del sistema, donde los modelos semánticos, como el entidad-relación, describen qué información va a manejar el software.
 
-En el caso de MAMMO-AI, el proceso se desarrolló en cinco fases, que se describen a continuación.
+Y pues, para MAMMO-AI el proceso quedó en cinco fases, que siguen a continuación.
 
 ## Fase 1. Recogida y análisis de requisitos
 
-Los requisitos de datos se tomaron de la Matriz de Trazabilidad de Requisitos del proyecto. Cada requisito funcional se tradujo en la información que el sistema necesita almacenar para poder cumplirlo. Casas Roma (s. f.) divide esta fase en tres subfases: la recogida de los requisitos, su estructuración y refinamiento, y su formalización. En MAMMO-AI, la formalización corresponde a la propia matriz de trazabilidad, donde cada requisito tiene un criterio de aceptación verificable.
+Los requisitos de datos salieron de la Matriz de Trazabilidad de Requisitos del proyecto. Básicamente, cada requisito funcional se convirtió en la información que el sistema tiene que guardar para poder cumplirlo. Casas Roma (s. f.) parte esta fase en tres subfases: recoger los requisitos, estructurarlos y refinarlos, y formalizarlos. En MAMMO-AI, la formalización es justo la matriz de trazabilidad, donde cada requisito tiene un criterio de aceptación que se puede verificar.
 
-Usuarios del sistema. Se identificaron cuatro perfiles: el profesional de la salud, que carga mamografías y consulta la clasificación; el estudiante, que usa el módulo de simulación; el docente, que revisa el desempeño en el tutor; y el administrador, que gestiona usuarios, modelos y escenarios.
+Usuarios del sistema. Quedaron cuatro perfiles: el profesional de salud, que sube mamografías y consulta la clasificación; el estudiante, que usa el módulo de simulación; el docente, que revisa el desempeño en el tutor; y el administrador, que se encarga de usuarios, modelos y escenarios.
 
 **Necesidades de información.**
 
@@ -80,7 +78,7 @@ Usuarios del sistema. Se identificaron cuatro perfiles: el profesional de la sal
 
 1.  Solo se registran conjuntos de datos anonimizados.
 
-2.  Solo puede haber un modelo activo a la vez, y su sensibilidad debe ser igual o superior a 0,85.
+2.  Solo puede haber un modelo activo a la vez, y debe tener una sensibilidad igual o superior a 0,85.
 
 3.  Cada análisis genera un único mapa de calor.
 
@@ -90,19 +88,19 @@ Usuarios del sistema. Se identificaron cuatro perfiles: el profesional de la sal
 
 6.  En una sesión del tutor, cada escenario se responde una sola vez.
 
-Hay una restricción que atraviesa toda esta fase: la base de datos no tiene una tabla de pacientes. Las imágenes de entrenamiento provienen de conjuntos ya anonimizados, y de las imágenes cargadas por los usuarios solo se guardan datos técnicos.
+Una restricción atraviesa toda la fase: la base de datos no tiene una tabla de pacientes. Las imágenes de entrenamiento provienen de conjuntos ya anonimizados, y de las imágenes cargadas solo se guardan datos técnicos.
 
 ## Fase 2. Diseño conceptual
 
-El diseño conceptual construye un esquema de alto nivel, independiente de la tecnología, a partir de los requisitos de la fase anterior (Casas Roma, s. f.). Dicho de otra forma, describe qué información maneja el sistema sin preocuparse todavía por el motor de base de datos. Lo representamos con un modelo entidad-relación de diez entidades (Figura 2).
+El diseño conceptual crea un esquema de alto nivel, independiente de la tecnología, a partir de los requisitos de la fase anterior (Casas Roma, s. f.). Por eso describe qué información maneja el sistema sin tener en cuenta el motor de base de datos. Se representó con un modelo entidad-relación de diez entidades (Figura 2).
 
 ![Figura 2. Modelo entidad-relación de MAMMO-AI](img/modelo-entidad-relacion.png)
 
 *Figura 2. Modelo conceptual entidad-relación de MAMMO-AI. Los atributos subrayados son identificadores. Elaboración propia.*
 
-La Figura 2 usa la notación de Chen. Cada **rectángulo** es una entidad, es decir, algo de lo que el sistema necesita guardar información. Cada **rombo** es una relación entre dos entidades y se nombra con un verbo. Cada **óvalo** es un atributo, y el atributo subrayado es el identificador que distingue a cada ejemplar de la entidad. Los números sobre las líneas indican la cardinalidad: «1» y «N» significan uno a muchos, y «N» y «M» significan muchos a muchos. Por ejemplo, el rombo carga, entre Usuario (1) y Mamografía (N), se lee así: un usuario carga muchas mamografías, y cada mamografía la carga un solo usuario.
+La Figura 2 usa la notación de Chen para el modelo entidad-relación. Cada **rectángulo** es una entidad, es decir, algo de lo que el sistema necesita guardar información. Cada **rombo** es una relación entre dos entidades, nombrada con un verbo. Cada **óvalo** es un atributo, y el atributo **subrayado** es el identificador que distingue a cada ejemplar de la entidad. Los números sobre las líneas indican la cardinalidad: “1” y “N” significan uno a muchos, y “N” y “M” significan muchos a muchos. Por ejemplo, el rombo *carga* entre Usuario (1) y Mamografía (N) se lee así: un usuario carga muchas mamografías, y cada mamografía la carga un solo usuario.
 
-Las entidades son Usuario, Rol, Mamografía, Análisis, Mapa de calor, Modelo, Conjunto de datos, Imagen de referencia, Escenario y Sesión de simulación. Sus relaciones y cardinalidades aparecen en la Tabla 3.
+Las entidades son Usuario, Rol, Mamografía, Análisis, Mapa de calor, Modelo, Conjunto de datos, Imagen de referencia, Escenario y Sesión de simulación. Sus relaciones y cardinalidades son las siguientes:
 
 **Tabla 3**
 
@@ -121,13 +119,13 @@ Las entidades son Usuario, Rol, Mamografía, Análisis, Mapa de calor, Modelo, C
 | Usuario – realiza – Sesión de simulación            | 1:N          | Un usuario puede practicar varias veces                              |
 | Sesión – responde – Escenario                       | N:M          | En una sesión se responden varios escenarios                         |
 
-La relación *responde* tiene atributos propios: la decisión del usuario, su justificación y el puntaje. Estos datos no pertenecen a la sesión ni al escenario por separado, sino a la combinación de ambos. Ese detalle es importante para el propósito del tutor, porque permite comparar lo que decidió el usuario con lo que sugirió la IA y con el diagnóstico real.
+La relación *responde* tiene atributos propios: la decisión del usuario, su justificación y el puntaje. Esos datos no pertenecen ni a la sesión ni al escenario por separado, sino a la combinación de ambos. Este detalle es importante para el propósito del tutor, porque permite comparar lo que decidió el usuario con lo que sugirió la IA y con el diagnóstico real.
 
-Conviene notar también la diferencia entre Mamografía e Imagen de referencia. La primera es una imagen cargada por un usuario, cuyo diagnóstico real se desconoce. La segunda proviene de un conjunto público y tiene una etiqueta conocida, así que sirve para entrenar y evaluar el modelo, y también para construir los escenarios del tutor.
+También conviene notar la separación entre Mamografía e Imagen de referencia. La primera es una imagen que carga un usuario y cuyo diagnóstico real se desconoce. La segunda proviene de un conjunto público y tiene una etiqueta conocida, por eso puede usarse para entrenar y evaluar el modelo y para construir los escenarios del tutor.
 
 ## Fase 3. Diseño lógico
 
-En esta fase el modelo conceptual se transformó en un modelo relacional de doce tablas, agrupadas en cuatro áreas: usuarios, datos y modelo, análisis, y tutor de IA (Figura 3). Casas Roma (s. f.) organiza este trabajo en tres pasos: revisar el modelo conceptual para detectar las llamadas trampas de diseño, transformarlo al modelo lógico y normalizar el resultado. Ese fue el orden que seguimos.
+En esta fase el modelo conceptual se transformó en un modelo relacional de doce tablas, agrupadas en cuatro áreas: usuarios, datos y modelo, análisis, y tutor de IA (Figura 3). Casas Roma (s. f.) organiza esta fase en tres pasos: revisar el modelo conceptual para detectar las llamadas trampas de diseño, transformarlo al modelo lógico y normalizar el resultado. Ese fue el orden que se siguió aquí.
 
 ![Figura 3. Modelo relacional de MAMMO-AI](img/modelo-relacional.png)
 
@@ -137,25 +135,25 @@ En esta fase el modelo conceptual se transformó en un modelo relacional de doce
 
 Las relaciones entre tablas se resolvieron así:
 
-**Relaciones 1:N:** la clave primaria del lado «uno» pasa como clave foránea al lado «muchos». Por ejemplo, id_usuario aparece en la tabla mamografia y id_modelo aparece en analisis.
+Relaciones 1:N: la clave primaria del lado “uno” pasa como clave foránea al lado “muchos”. Por ejemplo, id_usuario aparece en mamografia y id_modelo aparece en analisis.
 
-**Relación 1:1:** se resolvió con una clave foránea que, además, es única. En mapa_calor, id_analisis tiene restricción UNIQUE, así que un análisis no puede tener dos mapas. Esa restricción es lo que convierte la relación en 1:1.
+Relación 1:1: se resolvió con una clave foránea que además es única. En mapa_calor, id_analisis tiene restricción UNIQUE, así que un análisis no puede tener dos mapas. Básicamente, eso es lo que obliga a que sea 1:1.
 
-**Relaciones N:M:** cada una generó una tabla intermedia. modelo_conjunto une modelos con conjuntos de datos mediante una clave primaria compuesta, y respuesta_escenario une sesiones con escenarios y, además, guarda los atributos propios de la relación.
+Relaciones N:M: cada una generó una tabla intermedia. modelo_conjunto une modelos con conjuntos de datos usando una clave primaria compuesta, y respuesta_escenario une sesiones con escenarios, además de guardar los atributos propios de la relación.
 
 **Normalización.** El modelo se llevó hasta la tercera forma normal (3FN):
 
-- **Primera forma normal:** todos los atributos son atómicos y no hay grupos repetidos. Por ejemplo, los roles se separaron en su propia tabla, en vez de repetirse como texto en cada usuario. La única excepción justificada son los hiperparámetros del modelo, que se guardan en un campo JSONB porque cambian según la arquitectura de la red y no se consultan por separado.
+- **Primera forma normal:** todos los atributos son atómicos y no hay grupos repetidos. Los roles, por ejemplo, se separaron en su propia tabla en lugar de repetirse como texto en cada usuario. La única excepción justificada son los hiperparámetros del modelo, guardados en un campo JSONB porque varían según la arquitectura de la red y no se consultan por separado.
 
-- **Segunda forma normal:** en modelo_conjunto, que es la única tabla con clave compuesta, no hay atributos que dependan solo de una parte de la clave.
+- **Segunda forma normal:** en la única tabla con clave compuesta, modelo_conjunto, no existen atributos que dependan solo de una parte de la clave.
 
-- **Tercera forma normal:** no hay dependencias transitivas. El caso más claro está en el tutor: saber si una respuesta fue correcta parece un dato de respuesta_escenario, pero en realidad depende de la etiqueta real de la imagen. Si se guardara ahí, aparecería una dependencia transitiva y el riesgo de tener datos contradictorios. Por eso no se almacena: se calcula en una vista. Lo mismo ocurre con el dato que indica si el usuario siguió o no la sugerencia de la IA.
+- **Tercera forma normal:** no hay dependencias transitivas. El caso más ilustrativo está en el tutor: saber si una respuesta fue correcta parece un dato de respuesta_escenario, pero en realidad depende de la etiqueta real de la imagen. Guardarlo allí crearía una dependencia transitiva y el riesgo de datos contradictorios. Por eso no se almacena, sino que se calcula en una vista. Lo mismo ocurre con el dato de si el usuario siguió o no la sugerencia de la IA.
 
 ## Fase 4. Diseño físico
 
-El diseño físico se implementó en PostgreSQL 16, dentro de un esquema llamado mammo_ai. Elegimos este motor porque es libre, cumple las propiedades ACID y ofrece tres funciones que el diseño aprovecha: restricciones CHECK, el tipo JSONB y los índices parciales. El script completo está en el anexo. Las decisiones de esta fase se tomaron según los tres criterios que propone Casas Roma (s. f.) para el diseño físico: tiempo de respuesta, uso del espacio y rendimiento.
+El diseño físico se implementó en PostgreSQL 16, dentro de un esquema llamado mammo_ai. Se eligió este motor porque es libre, cumple las propiedades ACID y ofrece tres funciones que el diseño aprovecha: restricciones CHECK, el tipo JSONB y los índices parciales. El script completo está en el anexo. Las decisiones de esta fase se tomaron con los tres criterios que propone Casas Roma (s. f.) para el diseño físico: el tiempo de respuesta, el uso del espacio y el rendimiento.
 
-**Tipos de datos.** Cada tipo se eligió según el dato que guarda. Las métricas del modelo y la confianza usan NUMERIC(5,4), porque son valores entre 0 y 1 que no deben perder precisión. La huella SHA-256 usa CHAR(64), ya que siempre mide 64 caracteres. Las fechas usan TIMESTAMPTZ para conservar la zona horaria. Las claves primarias usan SERIAL, un entero que PostgreSQL genera solo (1, 2, 3...) cada vez que se inserta una fila. Las claves foráneas, en cambio, usan INTEGER, porque no generan números nuevos: solo guardan el valor que ya tiene la fila a la que apuntan. Por ejemplo, id_usuario es SERIAL en la tabla usuario e INTEGER en la tabla mamografia.
+**Tipos de datos.** Cada tipo se eligió según el dato que guarda. Las métricas del modelo y la confianza usan NUMERIC(5,4) porque son valores entre 0 y 1 que no deben perder precisión. La huella SHA-256 usa CHAR(64) porque siempre tiene 64 caracteres. Las fechas usan TIMESTAMPTZ para conservar la zona horaria. Las claves primarias usan SERIAL, que es un entero que PostgreSQL numera solo (1, 2, 3…) cada vez que se inserta una fila. Las claves foráneas, en cambio, usan INTEGER, porque no generan números nuevos: solo guardan el número que ya tiene la fila a la que apuntan. Por ejemplo, id_usuario es SERIAL en la tabla usuario e INTEGER en la tabla mamografia.
 
 **Tabla 4**
 
@@ -171,15 +169,15 @@ El diseño físico se implementó en PostgreSQL 16, dentro de un esquema llamado
 | Sin imágenes duplicadas por usuario   | UNIQUE (id_usuario, hash_sha256) en mamografia            |
 | Cada escenario una vez por sesión     | UNIQUE (id_sesion, id_escenario) en respuesta_escenario   |
 
-**Índices.** Además de los que PostgreSQL crea automáticamente para las claves primarias y únicas, creamos índices para las consultas más frecuentes. El más importante es ix_mamografia_usuario (id_usuario, fecha_carga DESC), que permite mostrar rápidamente el historial reciente de cada profesional. Los demás aceleran la búsqueda de análisis por mamografía, de análisis por modelo y fecha, y de respuestas por escenario.
+**Índices.** Además de los que PostgreSQL crea para las claves primarias y únicas, se crearon índices para las consultas más frecuentes. El más importante es ix_mamografia_usuario (id_usuario, fecha_carga DESC), que sirve para mostrar el historial reciente de cada profesional. Los demás aceleran la búsqueda de análisis por mamografía, por modelo y fecha, y de respuestas por escenario.
 
-**Integridad referencial.** Los datos que dependen de otros se eliminan en cascada (ON DELETE CASCADE). Si se borra una mamografía, también desaparecen sus análisis y su mapa de calor, y así no quedan registros huérfanos. En cambio, no se permite eliminar un modelo que ya produjo análisis, para conservar la trazabilidad de cada resultado.
+**Integridad referencial.** Los datos que dependen de otros se eliminan en cascada (ON DELETE CASCADE). Si se elimina una mamografía, desaparecen con ella sus análisis y su mapa de calor, sin dejar registros huérfanos. En cambio, no se permite eliminar un modelo que ya produjo análisis, para conservar la trazabilidad de cada resultado.
 
-**Seguridad.** Aplicamos el principio de mínimo privilegio con dos roles. mammo_app, que usa la aplicación, puede consultar e insertar resultados, pero no modificar modelos ni conjuntos de datos. mammo_lectura solo consulta y está pensado para los reportes de calidad. Las contraseñas de los usuarios se guardan como hash, nunca en texto plano.
+**Seguridad.** Se aplicó el principio de mínimo privilegio con dos roles. mammo_app, que usa la aplicación, puede consultar e insertar resultados, pero no puede modificar los modelos ni los conjuntos de datos. mammo_lectura solo consulta, y está pensado para los reportes de calidad. Las contraseñas de los usuarios se guardan como un hash, nunca en texto plano.
 
 ## Fase 5. Implementación y optimización
 
-El script se ejecutó en una instancia de PostgreSQL 16 y creó sin errores las doce tablas, los índices, las vistas y los roles. Luego cargamos datos de prueba para comprobar que las reglas del negocio realmente se cumplen:
+El script se ejecutó en una instancia de PostgreSQL 16 y creó las doce tablas, los índices, las vistas y los roles sin errores. Después se cargaron datos de prueba para comprobar que las reglas del negocio realmente se cumplen:
 
 **Tabla 5**
 
@@ -196,21 +194,21 @@ El script se ejecutó en una instancia de PostgreSQL 16 y creó sin errores las 
 | La aplicación intenta modificar un modelo              | Rechazo            | Permiso denegado al rol mammo_app           |
 | Flujo completo: usuario, carga, análisis, mapa y tutor | Registro correcto  | Registro correcto                           |
 
-**Vistas.** Una vista es una tabla lógica que no guarda datos propios, sino que los obtiene de otras tablas mediante una consulta predefinida, y permite ocultar a cada usuario los detalles de la estructura (Casas Roma, s. f.). Creamos tres vistas para las consultas que el sistema hace con más frecuencia. v_resultado_analisis reúne en una sola consulta lo que muestra la interfaz: clasificación, confianza, mapa de calor y versión del modelo. v_desempeno_tutor calcula si cada respuesta fue correcta, si el usuario siguió a la IA y si la IA se equivocó, lo que permite medir el sesgo de automatización, que es el objetivo central del tutor. v_tiempo_respuesta resume los tiempos por versión del modelo y el porcentaje de análisis que tardaron menos de 10 segundos, con lo que se verifica el requisito 4.1.
+**Vistas.** Una vista es una tabla lógica que no almacena datos propios, sino que los obtiene de otras tablas mediante una consulta predefinida, y permite ocultar a cada usuario los detalles de la estructura (Casas Roma, s. f.). Se crearon tres vistas para las consultas que el sistema hace con más frecuencia. v_resultado_analisis reúne en una sola consulta lo que muestra la interfaz: clasificación, confianza, mapa de calor y versión del modelo. v_desempeno_tutor calcula si cada respuesta fue correcta, si el usuario siguió a la IA y si la IA se equivocó; con esto se puede medir el sesgo de automatización, que es el objetivo del tutor. v_tiempo_respuesta resume los tiempos por versión del modelo y el porcentaje de análisis que tardaron menos de 10 segundos, con lo que se verifica el requisito 4.1.
 
-**Optimización de consultas.** Con EXPLAIN revisamos el plan de ejecución de la consulta del historial de un usuario. PostgreSQL la resolvió con un *Index Scan* sobre ix_mamografia_usuario, en lugar de recorrer la tabla completa. Como el índice ya está ordenado por fecha descendente, tampoco necesita un paso adicional de ordenamiento.
+**Optimización de consultas.** Con EXPLAIN se revisó el plan de ejecución de la consulta del historial de un usuario. PostgreSQL resolvió la consulta con un *Index Scan* sobre ix_mamografia_usuario, en lugar de recorrer la tabla completa. Como el índice ya está ordenado por fecha descendente, tampoco necesita un paso adicional de ordenamiento.
 
-**Mantenimiento.** Antes de cada hito del proyecto se hará un respaldo con pg_dump. Los tiempos de respuesta se seguirán con la vista v_tiempo_respuesta y, si el volumen de análisis crece, evaluaremos la partición de la tabla analisis por fecha.
+**Mantenimiento.** Antes de cada hito del proyecto se hará un respaldo con pg_dump. Los tiempos de respuesta se seguirán con la vista v_tiempo_respuesta y, si el volumen de análisis crece, se podrá evaluar la partición de la tabla analisis por fecha.
 
 ## Conclusiones
 
-Separar las imágenes del resto de los datos fue la decisión que más influyó en el diseño. Gracias a eso, la base de datos de MAMMO-AI se concentra en lo que realmente se consulta —resultados, métricas, versiones y respuestas—, mientras los archivos pesados quedan en un almacén aparte.
+Separar las imágenes del resto de los datos fue la decisión que más influyó en el diseño. Gracias a ella, la base de datos de MAMMO-AI se concentra en lo que realmente se consulta —resultados, métricas, versiones y respuestas—, mientras los archivos pesados quedan en un almacén aparte.
 
 Recorrer las cinco fases en orden permitió que cada requisito de la matriz de trazabilidad tuviera un lugar concreto en el modelo. Las reglas más críticas, como la sensibilidad mínima del modelo activo, el uso exclusivo de datos anonimizados y el aviso de herramienta de apoyo, no dependen de que la aplicación las respete: la propia base de datos rechaza cualquier dato que las incumpla, como lo confirmaron las pruebas.
 
-La normalización hasta la tercera forma normal tuvo un efecto que va más allá de evitar redundancias. Al calcular, en lugar de almacenar, si una respuesta del tutor fue correcta, la vista de desempeño siempre refleja el diagnóstico real de la imagen. Eso hace confiable la medición del sesgo de automatización, que es una de las razones de ser del proyecto.
+La normalización hasta la tercera forma normal tuvo un efecto que va más allá de evitar redundancia. Al no almacenar si una respuesta del tutor fue correcta, sino calcularlo, la vista de desempeño siempre refleja el diagnóstico real de la imagen, y eso hace confiable la medición del sesgo de automatización, que es una de las razones de ser del proyecto.
 
-El modelo queda preparado para crecer: un nuevo tipo de usuario solo requiere un registro en la tabla rol, y una nueva versión del modelo se registra sin modificar la estructura de las tablas.
+El modelo queda preparado para crecer: un nuevo tipo de usuario solo requiere un registro en rol, y una nueva versión del modelo se registra sin modificar la estructura de las tablas.
 
 ## Referencias
 
@@ -222,7 +220,7 @@ Sommerville, I. (2011). *Ingeniería de software* (9.ª ed., V. Campos Olguín, 
 
 ## Anexo A. Script SQL del diseño físico
 
-El script también está en [`database/mammo_ai_bd.sql`](../database/mammo_ai_bd.sql).
+Script completo para PostgreSQL 16. También está en [`database/mammo_ai_bd.sql`](../database/mammo_ai_bd.sql).
 
 ```sql
 -- =====================================================================
