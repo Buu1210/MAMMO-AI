@@ -1,0 +1,12 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+site:
+  title: MAMMO-AI
+  structure:
+    - type: space
+      key: mammo-ai-docs
+      title: MAMMO-AI
+      path: docs
+      default: true
+      content:
+        directory: ./docs
+        language: es
