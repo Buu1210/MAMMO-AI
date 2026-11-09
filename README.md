@@ -31,6 +31,7 @@ Metodología de trabajo: **TSP (Team Software Process)**, con plantillas de gest
 | Juan Jose Herrera Rengifo | Constructor |
 | Juan Camilo Ospina Daza | Tester |
 | Kelvin Andres Palma Viveros | Diseñador |
+| Daniel Esteban Olarte Vasquez | Planificador |
 
 ## Documentación
 
